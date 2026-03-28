@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Title,
@@ -8,25 +8,55 @@ import {
   Group,
 } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
-import { mockCompanies } from "../data/mockData";
+import { fetchCompanies } from "../services/api";
 
 export default function Home() {
   const [searchValue, setSearchValue] = useState("");
   const [error, setError] = useState("");
+  const [companies, setCompanies] = useState([]);
   const navigate = useNavigate();
 
-  const companyNames = mockCompanies.map((company) => company.name);
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  async function loadCompanies(query = "") {
+    try {
+      const data = await fetchCompanies(query);
+      setCompanies(data);
+    } catch (err) {
+      console.error("Failed to load companies:", err);
+      setError("Could not load companies");
+    }
+  }
+
+  const companyNames = useMemo(() => {
+    return companies.map((company) => company.name);
+  }, [companies]);
 
   const handleSearch = () => {
-    const selectedCompany = mockCompanies.find(
+    const selectedCompany = companies.find(
       (c) => c.name.toLowerCase() === searchValue.toLowerCase(),
     );
 
     if (selectedCompany) {
-      setError(""); // Clear any previous errors
-      navigate(`/company/${selectedCompany.id}`); // Redirect to the profile
+      setError("");
+      navigate(`/company/${selectedCompany.id}`);
     } else {
       setError("Company not found. Try again");
+    }
+  };
+
+  const handleInputChange = async (value) => {
+    setSearchValue(value);
+    setError("");
+
+    try {
+      const data = await fetchCompanies(value);
+      setCompanies(data);
+    } catch (err) {
+      console.error("Search failed:", err);
+      setError("Could not search companies");
     }
   };
 
@@ -45,7 +75,7 @@ export default function Home() {
           placeholder="Search companies or brands..."
           data={companyNames}
           value={searchValue}
-          onChange={setSearchValue}
+          onChange={handleInputChange}
           style={{ flex: 1, maxWidth: 500 }}
           error={error}
           onKeyDown={(e) => {

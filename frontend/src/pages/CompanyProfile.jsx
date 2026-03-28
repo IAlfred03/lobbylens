@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Container,
   Title,
@@ -5,15 +6,50 @@ import {
   Card,
   Grid,
   Group,
-  Badge,
 } from "@mantine/core";
-import { BarChart, DonutChart } from "@mantine/charts";
+import { BarChart } from "@mantine/charts";
 import { useParams } from "react-router-dom";
-import { mockCompanies } from "../data/mockData";
+import { fetchCompany, fetchCompanySpending } from "../services/api";
 
 export default function CompanyProfile() {
   const { id } = useParams();
-  const company = mockCompanies.find((c) => c.id === id) || mockCompanies[0];
+  const [company, setCompany] = useState(null);
+  const [spending, setSpending] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadCompanyData();
+  }, [id]);
+
+  async function loadCompanyData() {
+    try {
+      setError("");
+      const companyData = await fetchCompany(id);
+      const spendingData = await fetchCompanySpending(id);
+
+      setCompany(companyData);
+      setSpending(spendingData);
+    } catch (err) {
+      console.error("Failed to load company profile:", err);
+      setError("Could not load company data");
+    }
+  }
+
+  if (error) {
+    return (
+      <Container size="lg" mt="xl">
+        <Text c="red">{error}</Text>
+      </Container>
+    );
+  }
+
+  if (!company || !spending) {
+    return (
+      <Container size="lg" mt="xl">
+        <Text>Loading...</Text>
+      </Container>
+    );
+  }
 
   return (
     <Container size="lg" mt="xl">
@@ -21,9 +57,10 @@ export default function CompanyProfile() {
         <div>
           <Title order={1}>{company.name}</Title>
           <Text c="dimmed" mt="sm" maw={600}>
-            {company.description}
+            Lobbying spending details pulled from the backend API.
           </Text>
         </div>
+
         <Card
           withBorder
           radius="md"
@@ -31,23 +68,23 @@ export default function CompanyProfile() {
           bg="var(--mantine-color-blue-light)"
         >
           <Text tt="uppercase" c="dimmed" fw={700} size="xs">
-            Total Spent (2023)
+            Total Spending
           </Text>
           <Title order={2}>
-            ${(company.totalSpent2023 / 1000000).toFixed(1)}M
+            ${(spending.total_spending / 1000000).toFixed(1)}M
           </Title>
         </Card>
       </Group>
 
       <Grid gutter="xl" mt="xl">
-        <Grid.Col span={{ base: 12, md: 7 }}>
+        <Grid.Col span={{ base: 12, md: 12 }}>
           <Card withBorder radius="md" padding="xl">
             <Title order={3} mb="xl">
               Spending Over Time
             </Title>
             <BarChart
               h={300}
-              data={company.spendingByYear}
+              data={spending.by_year}
               dataKey="year"
               series={[
                 { name: "amount", color: "blue.6", label: "Lobbying Spend" },
@@ -59,34 +96,6 @@ export default function CompanyProfile() {
                 tooltipItemColor: { display: "none" },
               }}
             />
-          </Card>
-        </Grid.Col>
-
-        <Grid.Col span={{ base: 12, md: 5 }}>
-          <Card withBorder radius="md" padding="xl" h="100%">
-            <Title order={3} mb="xl">
-              Top Issues (2023)
-            </Title>
-            <Group justify="center">
-              <DonutChart
-                data={company.topIssues}
-                withTooltip
-                size={200}
-                thickness={30}
-                valueFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
-              />
-            </Group>
-            <Group mt="xl" justify="center" gap="xs">
-              {company.topIssues.map((issue) => (
-                <Badge
-                  key={issue.name}
-                  color={issue.color.split(".")[0]}
-                  variant="light"
-                >
-                  {issue.name}
-                </Badge>
-              ))}
-            </Group>
           </Card>
         </Grid.Col>
       </Grid>
