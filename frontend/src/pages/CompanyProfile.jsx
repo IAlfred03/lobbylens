@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Container,
-  Title,
-  Text,
-  Card,
-  Grid,
-  Group,
-} from "@mantine/core";
+import { Container, Title, Text, Card, Grid, Group } from "@mantine/core";
 import { BarChart } from "@mantine/charts";
 import { useParams } from "react-router-dom";
 import { fetchCompany, fetchCompanySpending } from "../services/api";
@@ -34,6 +27,12 @@ export default function CompanyProfile() {
       setError("Could not load company data");
     }
   }
+
+  const formatSpend = (value) => {
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+    return `$${value}`;
+  };
 
   if (error) {
     return (
@@ -70,9 +69,7 @@ export default function CompanyProfile() {
           <Text tt="uppercase" c="dimmed" fw={700} size="xs">
             Total Spending
           </Text>
-          <Title order={2}>
-            ${(spending.total_spending / 1000000).toFixed(1)}M
-          </Title>
+          <Title order={2}>{formatSpend(spending.total_spending)}</Title>
         </Card>
       </Group>
 
@@ -90,7 +87,7 @@ export default function CompanyProfile() {
                 { name: "amount", color: "blue.6", label: "Lobbying Spend" },
               ]}
               tickLine="y"
-              valueFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+              valueFormatter={formatSpend}
               cursorFill="transparent"
               styles={{
                 tooltipItemColor: { display: "none" },
