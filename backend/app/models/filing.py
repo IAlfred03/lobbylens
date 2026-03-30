@@ -1,6 +1,8 @@
 from sqlalchemy import Integer, ForeignKey, Numeric, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.db import Base
+
 
 class Filing(Base):
     __tablename__ = "filings"
@@ -12,3 +14,9 @@ class Filing(Base):
     quarter: Mapped[str] = mapped_column(String(2))  # Q1..Q4
     amount: Mapped[float] = mapped_column(Numeric(14, 2))
     source: Mapped[str] = mapped_column(String(200), default="unknown")
+
+    issue_links = relationship(
+        "FilingIssue",
+        back_populates="filing",
+        cascade="all, delete-orphan",
+    )
