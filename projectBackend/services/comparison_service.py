@@ -8,22 +8,27 @@ class ComparisonService:
         db = SessionLocal()
 
         query = text("""
-            SELECT c.name, SUM(f.amount) as total_spend
+            SELECT c.id, c.name, SUM(f.amount) as total_spend
             FROM companies c
             JOIN filings f ON c.id = f.company_id
             WHERE c.id IN (:a, :b)
-            GROUP BY c.name
+            GROUP BY c.id, c.name
         """)
 
-        result = db.execute(query, {"a": companyA, "b": companyB})
-        rows = [dict(row) for row in result.fetchall()]
+      rows = [dict(r) for r in db.execute(query, {"a": companyA, "b": companyB})]
 
         if len(rows) < 2:
-            return {"error": "One or both companies not found"}
+            return {"success": False, "error": "Companies not found"}
 
-        diff = rows[0]["total_spend"] - rows[1]["total_spend"]
+        a, b = rows
+
+        diff = a["total_spend"] - b["total_spend"]
+        percent = (diff / b["total_spend"] * 100) if b["total_spend"] else 0
 
         return {
-            "companies": rows,
-            "difference": diff
+            "success": True,
+            "labels": [a["name"], b["name"]],
+            "data": [a["total_spend"], b["total_spend"]],
+            "difference": diff,
+            "percent_difference": round(percent, 2)
         }
