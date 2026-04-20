@@ -26,6 +26,7 @@ GROUP BY c.name
 HAVING (:min_spend IS NULL OR SUM(f.amount) >= :min_spend)
 ORDER BY {sort_by} {order}
 LIMIT :limit OFFSET :offset; """)
+
 result = db.execute(query, { 
         "industry": industry,
         "year": year,
