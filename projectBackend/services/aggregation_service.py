@@ -7,7 +7,13 @@ def filter_companies(industry=None, year=None, min_spend=None,page=1, limit=10, 
 
 db = SessionLocal()
 
- offset = (page - 1) * limit
+offset = (page - 1) * limit
+allowed_sort_fields = ["total_spend", "name"]
+ if sort_by not in allowed_sort_fields:
+    sort_by = "total_spend"
+
+  if order.lower() not in ["asc", "desc"]:
+     order = "desc"
 
 query = text(f"""
 SELECT c.name, SUM(f.amount) as total_spend
@@ -27,10 +33,11 @@ result = db.execute(query, {
         "limit": limit,
         "offset": offset
     })
-rows = result.fetchall()
-return {
-        "results": [dict(row) for row in rows],
-        "page": page,
-        "limit": limit,
-        "count": len(rows)
+rows = [dict(row) for row in result.fetchall()]
+
+    return {
+         "success": True,
+         "data": rows,
+         "count": len(rows),
+         "page": page
     }
