@@ -3,7 +3,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 
-
 class Issue(Base):
     __tablename__ = "issues"
 

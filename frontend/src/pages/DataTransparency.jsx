@@ -1,76 +1,44 @@
 import React, { useState, useEffect } from "react";
-
-const MOCK_FILINGS = [
-  {
-    id: 1,
-    company: "Acme Corp",
-    amount: 2500000,
-    issue: "Tech & Privacy",
-    date: "2024-03-15",
-    lobbyist: "Smith & Associates",
-  },
-  {
-    id: 2,
-    company: "Global Energy",
-    amount: 4100000,
-    issue: "Environment & Oil",
-    date: "2024-03-12",
-    lobbyist: "Capitol Strategies",
-  },
-  {
-    id: 3,
-    company: "HealthPlus+",
-    amount: 1800000,
-    issue: "Medicare Reform",
-    date: "2024-03-10",
-    lobbyist: "In-House",
-  },
-  {
-    id: 4,
-    company: "FinTech Solutions",
-    amount: 950000,
-    issue: "Tech & Crypto",
-    date: "2024-03-08",
-    lobbyist: "DC Partners",
-  },
-  {
-    id: 5,
-    company: "AeroDynamics",
-    amount: 3200000,
-    issue: "Defense Spending",
-    date: "2024-03-01",
-    lobbyist: "Smith & Associates",
-  },
-  {
-    id: 6,
-    company: "Silicon Systems",
-    amount: 5500000,
-    issue: "Tech & Antitrust",
-    date: "2024-02-28",
-    lobbyist: "In-House",
-  },
-];
+import { fetchGlobalSpending } from "../services/api";
 
 export default function Transparency() {
   const [filings, setFilings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState("All");
 
   useEffect(() => {
-    setTimeout(() => {
-      setFilings(MOCK_FILINGS);
-      setIsLoading(false);
-    }, 800);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const data = await fetchGlobalSpending();
+
+        setFilings(data);
+      } catch (err) {
+        console.error("Error fetching filings:", err);
+        setError(
+          "Failed to load data from the server. Ensure the backend is running.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   const getFilteredData = () => {
+    if (!Array.isArray(filings)) return [];
+
     let data = [...filings];
 
     if (activeFilter === "Top Spenders") {
       return data.sort((a, b) => b.amount - a.amount).slice(0, 3);
     }
     if (activeFilter === "Tech Sector") {
-      return data.filter((item) => item.issue.includes("Tech"));
+      return data.filter((item) => item.issue && item.issue.includes("Tech"));
     }
     if (activeFilter === "Recent") {
       return data.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -80,6 +48,7 @@ export default function Transparency() {
   };
 
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return "$0";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -111,7 +80,9 @@ export default function Transparency() {
           <h3 className="text-green-800 text-sm font-semibold uppercase tracking-wider">
             Active Filings
           </h3>
-          <p className="text-3xl font-bold text-green-900 mt-2">1,402</p>
+          <p className="text-3xl font-bold text-green-900 mt-2">
+            {filings.length > 0 ? filings.length : "..."}
+          </p>
         </div>
         <div className="bg-purple-50 p-6 rounded-lg border border-purple-100 shadow-sm">
           <h3 className="text-purple-800 text-sm font-semibold uppercase tracking-wider">
@@ -146,9 +117,14 @@ export default function Transparency() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="p-12 text-center text-gray-500">
-            Loading lobbying data...
+        {error ? (
+          <div className="p-12 text-center text-red-600 bg-red-50">
+            <p className="font-semibold">{error}</p>
+          </div>
+        ) : isLoading ? (
+          <div className="p-12 flex flex-col items-center justify-center text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+            Loading lobbying data from database...
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -169,21 +145,21 @@ export default function Transparency() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-gray-900">
-                      {filing.company}
+                      {filing.company || filing.name}
                     </td>
                     <td className="px-6 py-4 font-semibold text-red-600">
                       {formatCurrency(filing.amount)}
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                        {filing.issue}
+                        {filing.issue || "N/A"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-600">
-                      {filing.lobbyist}
+                      {filing.lobbyist || "N/A"}
                     </td>
                     <td className="px-6 py-4 text-gray-500 text-sm">
-                      {filing.date}
+                      {filing.date || "N/A"}
                     </td>
                   </tr>
                 ))}

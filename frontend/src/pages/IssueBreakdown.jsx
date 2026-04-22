@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Container,
   Title,
@@ -5,61 +6,91 @@ import {
   Card,
   Table,
   Badge,
-  Group,
+  Loader,
+  Center,
+  Alert,
 } from "@mantine/core";
 import { BarChart } from "@mantine/charts";
-import { mockCompanies } from "../data/mockData";
+// 1. Remove mock data, import the new API function!
+import { fetchIssueBreakdown } from "../services/api";
 
 export default function IssueBreakdown() {
-  const issueMap = {};
+  const [issues, setIssues] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  mockCompanies.forEach((company) => {
-    company.topIssues.forEach((issue) => {
-      if (!issueMap[issue.name]) {
-        issueMap[issue.name] = {
-          name: issue.name,
-          totalValue: 0,
-          color: issue.color,
-          topSpender: company.name,
-        };
-      }
-      issueMap[issue.name].totalValue += issue.value;
+  // 2. Fetch the data when the page loads
+  useEffect(() => {
+    loadIssues();
+  }, []);
 
-      if (issue.value > (issueMap[issue.name].highestSpend || 0)) {
-        issueMap[issue.name].highestSpend = issue.value;
-        issueMap[issue.name].topSpender = company.name;
-      }
-    });
-  });
+  async function loadIssues() {
+    try {
+      setIsLoading(true);
+      setError("");
+      const data = await fetchIssueBreakdown();
+      setIssues(data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load policy issues from the database.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const aggregatedIssues = Object.values(issueMap).sort(
-    (a, b) => b.totalValue - a.totalValue,
-  );
+  // 3. Loading & Error States
+  if (error) {
+    return (
+      <Container size="lg" mt="xl">
+        <Alert color="red" title="Database Error">
+          {error}
+        </Alert>
+      </Container>
+    );
+  }
 
-  const chartData = aggregatedIssues.map((issue) => ({
+  if (isLoading) {
+    return (
+      <Container size="lg" mt="xl">
+        <Center
+          h={300}
+          flex={1}
+          style={{ flexDirection: "column", gap: "1rem" }}
+        >
+          <Loader size="xl" type="dots" color="teal" />
+          <Text c="dimmed" fw={500}>
+            Calculating issue aggregations...
+          </Text>
+        </Center>
+      </Container>
+    );
+  }
+
+  // 4. Map the real data to the charts!
+  const chartData = issues.map((issue) => ({
     issueName: issue.name,
     amount: issue.totalValue,
-    color: issue.color,
+    color: issue.color || "teal.6", // Fallback color just in case
   }));
 
-  const rows = aggregatedIssues.map((issue) => (
+  const rows = issues.map((issue) => (
     <Table.Tr key={issue.name}>
       <Table.Td>
-        <Badge color={issue.color.split(".")[0]} variant="light">
+        <Badge color={(issue.color || "teal").split(".")[0]} variant="light">
           {issue.name}
         </Badge>
       </Table.Td>
       <Table.Td fw={500}>${(issue.totalValue / 1000000).toFixed(1)}M</Table.Td>
       <Table.Td>
         <Text size="sm" c="dimmed">
-          {issue.topSpender}
+          {issue.topSpender || "N/A"}
         </Text>
       </Table.Td>
     </Table.Tr>
   ));
 
   return (
-    <Container size="lg" mt="xl">
+    <Container size="lg" mt="xl" className="animate-fade-in">
       <Title order={1} mb="xs">
         Issue Breakdown
       </Title>
@@ -71,16 +102,22 @@ export default function IssueBreakdown() {
         <Title order={3} mb="xl">
           Total Spending by Policy Issue
         </Title>
-        <BarChart
-          h={300}
-          data={chartData}
-          dataKey="issueName"
-          series={[{ name: "amount", color: "teal.6", label: "Total Spend" }]}
-          tickLine="y"
-          valueFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
-          cursorFill="transparent"
-          styles={{ tooltipItemColor: { display: "none" } }}
-        />
+        {issues.length > 0 ? (
+          <BarChart
+            h={300}
+            data={chartData}
+            dataKey="issueName"
+            series={[{ name: "amount", color: "teal.6", label: "Total Spend" }]}
+            tickLine="y"
+            valueFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+            cursorFill="transparent"
+            styles={{ tooltipItemColor: { display: "none" } }}
+          />
+        ) : (
+          <Center h={200} bg="gray.0">
+            <Text c="dimmed">No issues found.</Text>
+          </Center>
+        )}
       </Card>
 
       <Card withBorder radius="md" padding="xl">

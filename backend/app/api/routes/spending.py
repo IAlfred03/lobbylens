@@ -36,3 +36,34 @@ def get_company_spending(company_id: int, db: Session = Depends(get_db)):
         total_spending=float(total_spending),
         by_year=[YearAmount(year=row.year, amount=float(row.amount)) for row in rows],
     )
+
+
+@router.get("/global/recent")
+def get_global_recent_spending(limit: int = 50, db: Session = Depends(get_db)):
+
+    stmt = (
+        select(
+            Filing.id,
+            Company.name.label("company_name"),
+            Filing.amount,
+            Filing.year
+        )
+        .join(Company, Company.id == Filing.company_id)
+        .order_by(Filing.amount.desc()) 
+        .limit(limit)
+    )
+    
+    rows = db.execute(stmt).all()
+
+    results = []
+    for row in rows:
+        results.append({
+            "id": row.id,
+            "company": row.company_name,
+            "amount": float(row.amount) if row.amount else 0,
+            "date": str(row.year) if row.year else "N/A", 
+            "issue": "N/A",      
+            "lobbyist": "N/A"    
+        })
+        
+    return results

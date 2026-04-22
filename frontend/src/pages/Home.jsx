@@ -6,6 +6,9 @@ import {
   Autocomplete,
   Button,
   Group,
+  Loader,
+  Center,
+  Alert,
 } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import { fetchCompanies } from "../services/api";
@@ -14,6 +17,7 @@ export default function Home() {
   const [searchValue, setSearchValue] = useState("");
   const [error, setError] = useState("");
   const [companies, setCompanies] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,11 +26,15 @@ export default function Home() {
 
   async function loadCompanies(query = "") {
     try {
+      setIsLoading(true);
+      setError("");
       const data = await fetchCompanies(query);
       setCompanies(data);
     } catch (err) {
       console.error("Failed to load companies:", err);
-      setError("Could not load companies");
+      setError("Could not connect to the database. Is the backend running?");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -43,25 +51,35 @@ export default function Home() {
       setError("");
       navigate(`/company/${selectedCompany.id}`);
     } else {
-      setError("Company not found. Try again");
+      setError(
+        `We couldn't find a company named "${searchValue}". Try picking one from the dropdown!`,
+      );
     }
   };
 
   const handleInputChange = async (value) => {
     setSearchValue(value);
-    setError("");
-
-    try {
-      const data = await fetchCompanies(value);
-      setCompanies(data);
-    } catch (err) {
-      console.error("Search failed:", err);
-      setError("Could not search companies");
-    }
   };
 
+  if (isLoading && companies.length === 0) {
+    return (
+      <Container size="md" mt="xl">
+        <Center
+          h={300}
+          flex={1}
+          style={{ flexDirection: "column", gap: "1rem" }}
+        >
+          <Loader size="xl" type="dots" color="blue" />
+          <Text c="dimmed" fw={500}>
+            Waking up the LobbyLens database...
+          </Text>
+        </Center>
+      </Container>
+    );
+  }
+
   return (
-    <Container size="md" mt="xl">
+    <Container size="md" mt="xl" className="animate-fade-in">
       <Title order={1} ta="center" mb="md">
         LobbyLens
       </Title>
@@ -70,19 +88,26 @@ export default function Home() {
         support.
       </Text>
 
+      {error && (
+        <Alert color="red" mb="md" variant="light" title="Search Error">
+          {error}
+        </Alert>
+      )}
+
       <Group align="flex-start" justify="center">
         <Autocomplete
-          placeholder="Search companies or brands..."
+          placeholder="Search companies or brands (e.g., Apple, DroneUp)..."
           data={companyNames}
           value={searchValue}
           onChange={handleInputChange}
           style={{ flex: 1, maxWidth: 500 }}
-          error={error}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSearch();
           }}
         />
-        <Button onClick={handleSearch}>Search</Button>
+        <Button onClick={handleSearch} color="blue">
+          Search
+        </Button>
       </Group>
     </Container>
   );

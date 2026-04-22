@@ -22,3 +22,15 @@ export async function fetchCompanySpending(companyId) {
   if (!res.ok) throw new Error("Failed to fetch company spending");
   return res.json();
 }
+
+export async function fetchGlobalSpending() {
+  const res = await fetch(`${API_BASE}/companies/global/recent`);
+  if (!res.ok) throw new Error("Failed to fetch global spending");
+  return res.json();
+}
+
+export async function fetchIssueBreakdown() {
+  const res = await fetch(`${API_BASE}/issues/breakdown`);
+  if (!res.ok) throw new Error("Failed to fetch issue breakdown");
+  return res.json();
+}
