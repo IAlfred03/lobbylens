@@ -34,3 +34,9 @@ export async function fetchIssueBreakdown() {
   if (!res.ok) throw new Error("Failed to fetch issue breakdown");
   return res.json();
 }
+
+export async function fetchDashboard() {
+  const res = await fetch(`${API_BASE}/dashboard`);
+  if (!res.ok) throw new Error("Failed to fetch dashboard data");
+  return res.json();
+}
