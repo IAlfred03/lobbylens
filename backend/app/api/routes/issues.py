@@ -82,9 +82,9 @@ def get_issue_breakdown(db: Session = Depends(get_db)):
     ]
 
     sorted_issues = sorted(
-        issue_data.values(),
+        [i for i in issue_data.values() if i["totalValue"] > 0],
         key=lambda x: x["totalValue"],
-        reverse=True,
+        reverse=True
     )
 
     return [
