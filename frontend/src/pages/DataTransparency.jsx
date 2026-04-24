@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { fetchGlobalSpending } from "../services/api";
+import { fetchGlobalSpending, fetchDashboard } from "../services/api";
 
 export default function Transparency() {
   const [filings, setFilings] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState("All");
@@ -13,14 +14,16 @@ export default function Transparency() {
         setIsLoading(true);
         setError(null);
 
-        const data = await fetchGlobalSpending();
+        const [filingsData, dashboardData] = await Promise.all([
+          fetchGlobalSpending(),
+          fetchDashboard(),
+        ]);
 
-        setFilings(data);
+        setFilings(Array.isArray(filingsData) ? filingsData : []);
+        setDashboard(dashboardData);
       } catch (err) {
-        console.error("Error fetching filings:", err);
-        setError(
-          "Failed to load data from the server. Ensure the backend is running.",
-        );
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load data from the server. Ensure the backend is running.");
       } finally {
         setIsLoading(false);
       }
@@ -29,26 +32,9 @@ export default function Transparency() {
     loadData();
   }, []);
 
-  const getFilteredData = () => {
-    if (!Array.isArray(filings)) return [];
-
-    let data = [...filings];
-
-    if (activeFilter === "Top Spenders") {
-      return data.sort((a, b) => b.amount - a.amount).slice(0, 3);
-    }
-    if (activeFilter === "Tech Sector") {
-      return data.filter((item) => item.issue && item.issue.includes("Tech"));
-    }
-    if (activeFilter === "Recent") {
-      return data.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-
-    return data;
-  };
-
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return "$0";
+
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -56,7 +42,36 @@ export default function Transparency() {
     }).format(amount);
   };
 
-  const displayData = getFilteredData();
+  const getRecentDisclosures = () => {
+    const disclosures = dashboard?.recent_disclosures || [];
+
+    let data = disclosures.map((item, index) => ({
+      id: index,
+      company: item.company,
+      amount: item.amount_spent,
+      issue: item.primary_issue,
+      lobbyist: item.lobbying_firm,
+      date: item.date_filed,
+    }));
+
+    if (activeFilter === "Top Spenders") {
+      return data.sort((a, b) => b.amount - a.amount).slice(0, 3);
+    }
+
+    if (activeFilter === "Tech Sector") {
+      return data.filter((item) =>
+        item.issue?.toLowerCase().includes("tech")
+      );
+    }
+
+    if (activeFilter === "Recent") {
+      return data;
+    }
+
+    return data;
+  };
+
+  const displayData = getRecentDisclosures();
 
   return (
     <div className="max-w-6xl mx-auto p-6 font-sans">
@@ -72,23 +87,29 @@ export default function Transparency() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 shadow-sm">
           <h3 className="text-blue-800 text-sm font-semibold uppercase tracking-wider">
-            Total Tracked (2024)
+            Total Tracked
           </h3>
-          <p className="text-3xl font-bold text-blue-900 mt-2">$18.05M</p>
+          <p className="text-3xl font-bold text-blue-900 mt-2">
+            {dashboard ? formatCurrency(dashboard.total_tracked) : "..."}
+          </p>
         </div>
+
         <div className="bg-green-50 p-6 rounded-lg border border-green-100 shadow-sm">
           <h3 className="text-green-800 text-sm font-semibold uppercase tracking-wider">
             Active Filings
           </h3>
           <p className="text-3xl font-bold text-green-900 mt-2">
-            {filings.length > 0 ? filings.length : "..."}
+            {dashboard ? dashboard.active_filings : "..."}
           </p>
         </div>
+
         <div className="bg-purple-50 p-6 rounded-lg border border-purple-100 shadow-sm">
           <h3 className="text-purple-800 text-sm font-semibold uppercase tracking-wider">
             Top Issue Area
           </h3>
-          <p className="text-3xl font-bold text-purple-900 mt-2">Technology</p>
+          <p className="text-3xl font-bold text-purple-900 mt-2">
+            {dashboard ? dashboard.top_issue_area : "..."}
+          </p>
         </div>
       </div>
 
@@ -112,7 +133,7 @@ export default function Transparency() {
                 >
                   {filterName}
                 </button>
-              ),
+              )
             )}
           </div>
         </div>
@@ -138,6 +159,7 @@ export default function Transparency() {
                   <th className="px-6 py-3 font-medium">Date Filed</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-200">
                 {displayData.map((filing) => (
                   <tr
@@ -145,7 +167,7 @@ export default function Transparency() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-gray-900">
-                      {filing.company || filing.name}
+                      {filing.company}
                     </td>
                     <td className="px-6 py-4 font-semibold text-red-600">
                       {formatCurrency(filing.amount)}

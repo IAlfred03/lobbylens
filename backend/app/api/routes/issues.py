@@ -10,14 +10,14 @@ from app.models.filing_issue import FilingIssue
 
 router = APIRouter(prefix="/issues", tags=["issues"])
 
+
 @router.get("/breakdown")
 def get_issue_breakdown(db: Session = Depends(get_db)):
-
     stmt = (
         select(
             Issue.name.label("issue_name"),
             Company.name.label("company_name"),
-            func.coalesce(func.sum(Filing.amount), 0).label("total_spent")
+            func.coalesce(func.sum(Filing.amount), 0).label("total_spent"),
         )
         .join(FilingIssue, FilingIssue.issue_id == Issue.id)
         .join(Filing, Filing.id == FilingIssue.filing_id)
@@ -26,6 +26,28 @@ def get_issue_breakdown(db: Session = Depends(get_db)):
     )
 
     rows = db.execute(stmt).all()
+
+    if not rows:
+        total = db.execute(
+            select(func.coalesce(func.sum(Filing.amount), 0))
+        ).scalar_one()
+
+        top = db.execute(
+            select(Company.name, func.sum(Filing.amount).label("total"))
+            .join(Filing, Filing.company_id == Company.id)
+            .group_by(Company.name)
+            .order_by(func.sum(Filing.amount).desc())
+            .limit(1)
+        ).first()
+
+        return [
+            {
+                "name": "General Lobbying",
+                "totalValue": float(total),
+                "topSpender": top.name if top else "N/A",
+                "color": "teal.6",
+            }
+        ]
 
     issue_data = {}
 
@@ -39,7 +61,7 @@ def get_issue_breakdown(db: Session = Depends(get_db)):
                 "name": issue_name,
                 "totalValue": 0,
                 "topSpender": company_name,
-                "maxSpend": spent
+                "maxSpend": spent,
             }
 
         issue_data[issue_name]["totalValue"] += spent
@@ -48,17 +70,29 @@ def get_issue_breakdown(db: Session = Depends(get_db)):
             issue_data[issue_name]["maxSpend"] = spent
             issue_data[issue_name]["topSpender"] = company_name
 
-    colors = ["teal.6", "blue.6", "grape.6", "orange.6", "cyan.6", "pink.6", "lime.6", "violet.6"]
-    results = []
+    colors = [
+        "teal.6",
+        "blue.6",
+        "grape.6",
+        "orange.6",
+        "cyan.6",
+        "pink.6",
+        "lime.6",
+        "violet.6",
+    ]
 
-    sorted_issues = sorted(issue_data.values(), key=lambda x: x["totalValue"], reverse=True)
+    sorted_issues = sorted(
+        issue_data.values(),
+        key=lambda x: x["totalValue"],
+        reverse=True,
+    )
 
-    for i, issue in enumerate(sorted_issues):
-        results.append({
+    return [
+        {
             "name": issue["name"],
             "totalValue": issue["totalValue"],
             "topSpender": issue["topSpender"],
-            "color": colors[i % len(colors)]
-        })
-
-    return results
+            "color": colors[i % len(colors)],
+        }
+        for i, issue in enumerate(sorted_issues)
+    ]
