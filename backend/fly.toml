@@ -1,0 +1,9 @@
+app = "lobbylens-backend"
+primary_region = "iad"
+
+[build]
+
+[env]
+
+[processes]
+app = "python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --app-dir ."
