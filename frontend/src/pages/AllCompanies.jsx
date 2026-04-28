@@ -13,7 +13,7 @@ export default function AllCompanies() {
 
   async function loadCompanies() {
     try {
-      const data = await fetchCompanies("", 500); // get a lot
+      const data = await fetchCompanies("", 1000); // get a lot
       setCompanies(data);
     } catch (err) {
       console.error(err);
