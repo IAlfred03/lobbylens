@@ -10,7 +10,7 @@ import {
   Center,
   Alert,
 } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { fetchCompanies } from "../services/api";
 
 export default function Home() {
@@ -111,6 +111,12 @@ export default function Home() {
           Search
         </Button>
       </Group>
+
+      <Center mt="lg">
+        <Button component={Link} to="/companies" variant="light" color="blue">
+          View All Companies
+        </Button>
+      </Center>
     </Container>
   );
 }
