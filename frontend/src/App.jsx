@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import CompanyProfile from "./pages/CompanyProfile";
 import IssueBreakdown from "./pages/IssueBreakdown";
 import DataTransparency from "./pages/DataTransparency";
+import AllCompanies from "./pages/AllCompanies";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="company/:id" element={<CompanyProfile />} />
           <Route path="issues" element={<IssueBreakdown />} />
           <Route path="transparency" element={<DataTransparency />} />
+          <Route path="companies" element={<AllCompanies />} />
         </Route>
       </Routes>
     </Router>
