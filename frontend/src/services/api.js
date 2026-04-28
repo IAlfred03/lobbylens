@@ -1,7 +1,7 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 
-export async function fetchCompanies(query = "", limit = 500) {
+export async function fetchCompanies(query = "", limit = 2000) {
   const url = new URL(`${API_BASE}/companies`);
 
   if (query.trim()) {

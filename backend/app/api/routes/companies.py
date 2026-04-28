@@ -21,7 +21,7 @@ def search_companies(
         stmt = stmt.where(Company.name.ilike(f"%{query.strip()}%"))
         stmt = stmt.limit(limit)
     else:
-        stmt = stmt.limit(200)  # bigger default for homepage
+        stmt = stmt.limit(1000)  # bigger default for homepage
 
     stmt = stmt.order_by(Company.name)
 
